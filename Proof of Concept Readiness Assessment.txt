@@ -1,0 +1,48 @@
+### 1. The Core Loop & Parameters are Mathematically Defined
+
+For a PoC, engineers need strict parameters, not just vibes. Your documents provide exact constraints:
+
+* **Matchmaking:** A strict 10:1 ratio (40 Eggheads vs. 4 Meatheads).
+* **Hardware Mapping:** You’ve already solved the asymmetrical control problem by tying inputs to factions (Keyboard/Mouse for Egghead transcription tasks; Controller for Meathead physical/rhythm tasks).
+* **Win/Loss States:** The "Master Loop" document outlines the percentage-based success system for Eggheads and the specific "Heat" disruption metrics for Meatheads.
+* **Physics Constraints:** Eggheads are "fragile" and crack upon impact (with respawn timers), while Meatheads suffer from intentional "clumsiness" (delayed inputs, poor turning radiuses) to balance their physical dominance.
+
+### 2. Actionable Level Design for a "Grey-Box" Prototype
+
+A PoC only needs one functional level to prove the fun. You have several fully detailed "Stealth Learning Modules" that are ready to be scripted:
+
+* **The Foundry of Force:** You have the exact layout defined. Eggheads build load-bearing bridges over molten iron by calculating *Tensile Strength*, while the Meathead "Foreman" operates a clumsy overhead crane to swing wrecking balls.
+* **The Steam-Powered Press:** Eggheads assemble typography blocks (*Kerning*, *Ligatures*) while Meatheads act as "Luddites" using giant wrenches to jam gears and cause ink explosions.
+* *Why this works for a PoC:* A developer can immediately block this out with simple cubes and spheres. The physics interactions (bridge building vs. wrecking ball) are standard physics-engine tasks.
+
+### 3. Concrete "If/Then" Logic for Programmers
+
+Your "Level Design" and "Game Mechanics" documents are brilliant because they translate abstract trivia into literal code logic. A programmer can look at your design and immediately write the scripts:
+
+* *If* Egghead activates **Habeas Corpus** -> *Then* instantly free grabbed Egghead from Meathead grip.
+* *If* Egghead activates **Subpoena** -> *Then* apply a physics force to pull Meathead to a specific tile.
+* *If* Egghead stands on **Allegro** -> *Then* apply speed multiplier.
+* *If* Meathead chooses **No Vowels** in the Pre-Match Firewall -> *Then* strip A,E,I,O,U from the Egghead typing UI.
+
+### 4. Diegetic UI/UX Direction
+
+Prototyping UI is notoriously time-consuming. Your "Architectural Blueprint" specifically dictates *Teaching Without Text* and moving UI into the environment.
+
+* Instead of menu lobbies, players spawn into the "Library" or the "Gym".
+* Instead of health bars, you use visual states (Meatheads getting "Intimidation Auras" that desaturate screens; Eggheads getting gold-leaf cracks).
+* This means a PoC team doesn't need to waste time building complex UI menus—they can just focus on the physical 3D space.
+
+---
+
+### How to execute the PoC right now:
+
+If you were to hand this to a development team today, you would tell them to ignore the "Progression & Rewards" (The Hair vs. The Heel) and the "Unboxing Animations" for now.
+
+**Tell them to build exactly this for the PoC:**
+
+1. **A flat arena** with 10 Egghead players and 1 Meathead player (scaled down for ease of testing).
+2. **One Objective:** Give the Eggheads a single "Sous-Chef's Laboratory" or "Foundry" task (e.g., carrying blocks to a specific zone while typing a word to lock them in).
+3. **One Disruption:** Give the Meathead the ability to charge, belly-flop, and pick up/yeet an Egghead.
+4. **One Stealth Learning Mechanic:** Put a "Habeas Corpus" or "Obsidian" tile on the floor and script its defensive effect.
+
+Your documentation has perfectly synthesized the brainy world of *Eggheads* with the physical chaos of the *Meatheads*. You are ready to build.
