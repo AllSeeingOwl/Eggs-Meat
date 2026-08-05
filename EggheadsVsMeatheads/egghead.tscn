@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://c7t45h87l1w8u"]
+
+[ext_resource type="Script" path="res://egghead.gd" id="1_x8d01"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_y1g52"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_i80j6"]
+radius = 0.5
+height = 1.0
+
+[node name="Egghead" type="RigidBody3D"]
+mass = 1.0
+axis_lock_angular_x = true
+axis_lock_angular_y = true
+axis_lock_angular_z = true
+script = ExtResource("1_x8d01")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_y1g52")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_i80j6")
