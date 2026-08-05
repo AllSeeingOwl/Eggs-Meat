@@ -13,6 +13,7 @@ var cooldown_timer: float = 0.0
 var charge_direction: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
+	collision_mask = 3 # Collide with default (1) and barrier (2) layers
 	contact_monitor = true
 	max_contacts_reported = 5
 	body_entered.connect(_on_body_entered)

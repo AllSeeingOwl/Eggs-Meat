@@ -5,6 +5,10 @@ extends RigidBody3D
 
 var stun_timer: float = 0.0
 var original_material: Material
+var is_typing: bool = false
+
+func is_egghead() -> bool:
+	return true
 
 func _ready() -> void:
 	# Get the mesh material to change its color later
@@ -17,6 +21,9 @@ func _ready() -> void:
 		mesh_instance.set_surface_override_material(0, original_material)
 
 func _physics_process(delta: float) -> void:
+	if is_typing:
+		return # Disable movement while typing
+
 	if stun_timer > 0.0:
 		stun_timer -= delta
 		if stun_timer <= 0.0:
