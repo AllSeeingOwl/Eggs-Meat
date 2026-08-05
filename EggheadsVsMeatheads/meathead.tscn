@@ -9,9 +9,9 @@ size = Vector3(2, 2, 2)
 size = Vector3(2, 2, 2)
 
 [node name="Meathead" type="RigidBody3D"]
-mass = 50.0
-linear_damp = 2.0
-angular_damp = 2.0
+mass = 200.0
+linear_damp = 5.0
+angular_damp = 5.0
 axis_lock_angular_x = true
 axis_lock_angular_y = true
 axis_lock_angular_z = true
