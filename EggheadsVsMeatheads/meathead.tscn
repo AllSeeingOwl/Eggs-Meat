@@ -1,0 +1,24 @@
+[gd_scene load_steps=5 format=3 uid="uid://d6t56i98m2x9v"]
+
+[ext_resource type="Script" path="res://meathead.gd" id="1_y9e12"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_y1g53"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_i80j7"]
+size = Vector3(2, 2, 2)
+
+[node name="Meathead" type="RigidBody3D"]
+mass = 50.0
+linear_damp = 2.0
+angular_damp = 2.0
+axis_lock_angular_x = true
+axis_lock_angular_y = true
+axis_lock_angular_z = true
+script = ExtResource("1_y9e12")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_y1g53")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_i80j7")
