@@ -1,0 +1,62 @@
+[gd_scene load_steps=9 format=3 uid="uid://trmnl12345678"]
+
+[ext_resource type="Script" path="res://terminal.gd" id="1_term"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_term"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_term"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_trig"]
+radius = 3.0
+height = 2.0
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_bar"]
+radius = 4.0
+height = 3.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bar"]
+top_radius = 4.0
+bottom_radius = 4.0
+height = 3.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bar"]
+transparency = 1
+albedo_color = Color(0.2, 0.5, 1.0, 0.4)
+
+[node name="Terminal" type="Node3D"]
+script = ExtResource("1_term")
+
+[node name="PhysicalTerminal" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PhysicalTerminal"]
+shape = SubResource("BoxShape3D_term")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="PhysicalTerminal"]
+mesh = SubResource("BoxMesh_term")
+
+[node name="TriggerArea" type="Area3D" parent="."]
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerArea"]
+shape = SubResource("CylinderShape3D_trig")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+billboard = 1
+text = ""
+font_size = 64
+
+[node name="Barrier" type="StaticBody3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+process_mode = 4
+visible = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Barrier"]
+shape = SubResource("CylinderShape3D_bar")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Barrier"]
+mesh = SubResource("CylinderMesh_bar")
+surface_material_override/0 = SubResource("StandardMaterial3D_bar")

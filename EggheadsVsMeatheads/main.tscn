@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://c7t45h87l1w8u" path="res://egghead.tscn" id="2_b2c3d"]
 [ext_resource type="PackedScene" uid="uid://d6t56i98m2x9v" path="res://meathead.tscn" id="3_c3d4e"]
 [ext_resource type="Script" path="res://camera.gd" id="4_d4e5f"]
+[ext_resource type="PackedScene" uid="uid://trmnl12345678" path="res://terminal.tscn" id="5_e5f6g"]
 
 [node name="Main" type="Node3D"]
 
@@ -18,6 +19,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, 0)
 
 [node name="Meathead" parent="." instance=ExtResource("3_c3d4e")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 0)
+
+[node name="Terminal" parent="." instance=ExtResource("5_e5f6g")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("target1", "target2")]
 transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 15, 10)
