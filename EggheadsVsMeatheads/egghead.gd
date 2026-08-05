@@ -11,6 +11,9 @@ func is_egghead() -> bool:
 	return true
 
 func _ready() -> void:
+	contact_monitor = true
+	max_contacts_reported = 5
+	body_entered.connect(_on_body_entered)
 	# Get the mesh material to change its color later
 	var mesh_instance = $MeshInstance3D
 	if mesh_instance and mesh_instance.mesh:
@@ -20,6 +23,15 @@ func _ready() -> void:
 		original_material = mat.duplicate()
 		mesh_instance.set_surface_override_material(0, original_material)
 
+
+var is_greased: bool = false
+func set_greased(val: bool) -> void:
+	is_greased = val
+	# Drastically reduce friction (slide uncontrollably)
+	if is_greased:
+		linear_damp = 0.0
+	else:
+		linear_damp = 5.0
 func _physics_process(delta: float) -> void:
 	if is_typing:
 		return # Disable movement while typing
@@ -35,6 +47,9 @@ func _physics_process(delta: float) -> void:
 	var input_dir = Input.get_vector("egghead_move_left", "egghead_move_right", "egghead_move_up", "egghead_move_down")
 	var direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
 
+
+	if is_greased:
+		direction = Vector3.ZERO # Cannot control movement while greased, just slide
 	if direction:
 		apply_central_force(direction * move_force)
 
@@ -48,8 +63,23 @@ func _physics_process(delta: float) -> void:
 func apply_stun(duration: float, knockback: Vector3) -> void:
 	if stun_timer <= 0.0: # Don't re-stun if already stunned, or maybe refresh it? Let's just reset timer for now
 		if $MeshInstance3D:
-			var stun_material = original_material.duplicate()
+			var stun_material
+			if original_material:
+				stun_material = original_material.duplicate()
+			else:
+				stun_material = StandardMaterial3D.new()
 			stun_material.albedo_color = Color.RED
 			$MeshInstance3D.set_surface_override_material(0, stun_material)
 	stun_timer = duration
 	apply_impulse(knockback)
+
+
+var is_thrown: bool = false
+
+func set_thrown(val: bool) -> void:
+	is_thrown = val
+
+func _on_body_entered(body: Node) -> void:
+	if is_thrown and (body.name.begins_with("Wall") or body is StaticBody3D):
+		apply_stun(2.0, Vector3.ZERO)
+		is_thrown = false
