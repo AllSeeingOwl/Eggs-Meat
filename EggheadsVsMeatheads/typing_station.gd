@@ -82,6 +82,9 @@ func type_char(c: String) -> void:
 		# Wrong letter: wipe the line (keeps it a skill check, not a mash).
 		if not target_phrase.begins_with(current_input):
 			current_input = ""
+			SoundFX.play_sfx("wrong", -6.0, 0.0)
+		elif current_input != target_phrase:
+			SoundFX.play_sfx("key", -8.0, 0.15)
 	_update_ui()
 	if current_input == target_phrase:
 		var egghead := active_egghead

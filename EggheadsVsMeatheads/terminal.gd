@@ -59,6 +59,7 @@ func on_success() -> void:
 			m.apply_stun(meathead_stun)
 	var game = get_tree().get_first_node_in_group("game")
 	if game:
+		game.juice("habeas", 0.35)
 		game.flash("HABEAS CORPUS! The body is produced." if freed > 0 else "HABEAS CORPUS! Barrier raised.")
 
 func _set_barrier(on: bool) -> void:
