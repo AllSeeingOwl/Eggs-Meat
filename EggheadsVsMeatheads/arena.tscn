@@ -1,15 +1,23 @@
-[gd_scene load_steps=5 format=3 uid="uid://cx603lix76w7w"]
+[gd_scene load_steps=7 format=3 uid="uid://cx603lix76w7w"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_y1g51"]
 size = Vector3(40, 1, 40)
 
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.5, 0.52, 0.58, 1)
+
 [sub_resource type="BoxMesh" id="BoxMesh_i80j5"]
+material = SubResource("Mat_floor")
 size = Vector3(40, 1, 40)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_k3h7m"]
 size = Vector3(40, 5, 1)
 
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
+albedo_color = Color(0.45, 0.3, 0.22, 1)
+
 [sub_resource type="BoxMesh" id="BoxMesh_63f71"]
+material = SubResource("Mat_wall")
 size = Vector3(40, 5, 1)
 
 [node name="Arena" type="Node3D"]

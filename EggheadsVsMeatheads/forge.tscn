@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://forge.gd" id="1_forge"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_forge"]
+albedo_color = Color(0.9, 0.35, 0.05, 1)
+emission_enabled = true
+emission = Color(1, 0.3, 0, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_forge"]
+material = SubResource("StandardMaterial3D_forge")
+size = Vector3(6, 0.06, 6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_forge"]
+size = Vector3(6, 2, 6)
+
+[node name="Forge" type="Node3D"]
+script = ExtResource("1_forge")
+
+[node name="Pad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+mesh = SubResource("BoxMesh_forge")
+
+[node name="TriggerArea" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_forge")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+billboard = 1
+pixel_size = 0.012
+modulate = Color(1, 0.8, 0.4, 1)
+outline_size = 16
+font_size = 96

@@ -1,0 +1,256 @@
+extends SceneTree
+## Headless gameplay tests. Run from the project folder:
+##   godot --headless --fixed-fps 60 -s res://tests/test_suite.gd
+## Each test loads a fresh copy of main.tscn and steps real physics.
+
+var failures: Array[String] = []
+var main: Node
+
+func _initialize() -> void:
+	_run.call_deferred()
+
+func _run() -> void:
+	var tests := [
+		"test_scene_setup", "test_grab_and_yeet_into_wall", "test_charge_cracks_and_respawns",
+		"test_belly_flop_respects_obsidian", "test_allegro_speeds_up", "test_grease",
+		"test_habeas_corpus_frees_captive", "test_escape_cancels_typing",
+		"test_forge_locks_block_and_wins", "test_wrong_letter_resets", "test_timer_expiry",
+		"test_struggle_free", "test_ai_soak",
+	]
+	for t in tests:
+		await _fresh()
+		var before := failures.size()
+		await call(t)
+		print(("PASS  " if failures.size() == before else "FAIL  ") + t)
+	_teardown()
+	if failures.is_empty():
+		print("\nAll %d tests passed." % tests.size())
+		quit(0)
+	else:
+		print("\n%d failure(s):\n  %s" % [failures.size(), "\n  ".join(failures)])
+		quit(1)
+
+func check(cond: bool, msg: String) -> void:
+	if not cond:
+		failures.append(msg)
+		push_error("CHECK FAILED: " + msg)
+
+func frames(n: int) -> void:
+	for i in n:
+		await physics_frame
+
+func _teardown() -> void:
+	if main and is_instance_valid(main):
+		root.remove_child(main)
+		main.free()
+	main = null
+
+func _fresh() -> void:
+	_teardown()
+	main = load("res://main.tscn").instantiate()
+	root.add_child(main)
+	await frames(2)
+
+func meat() -> Node: return main.get_node("Meathead")
+func bots() -> Array: return get_nodes_in_group("egghead").filter(func(e): return not e.is_player)
+
+func place(body: Node3D, pos: Vector3) -> void:
+	body.global_position = pos
+	body.linear_velocity = Vector3.ZERO
+
+func park_everyone_else(keep: Array) -> void:
+	var i := 0
+	for e in get_nodes_in_group("egghead"):
+		if not keep.has(e):
+			place(e, Vector3(-17 + (i % 4) * 1.2, 0.7, -17 + (i / 4) * 1.2))
+			e.process_mode = Node.PROCESS_MODE_DISABLED
+			i += 1
+
+# --- Tests -----------------------------------------------------------------
+
+func test_scene_setup() -> void:
+	check(main.player != null and main.player.is_player, "player egghead spawned")
+	check(bots().size() == 9, "9 bot eggheads (10:1 ratio scaled down), got %d" % bots().size())
+	check(get_nodes_in_group("block").size() == 8, "8 foundry blocks")
+	check(get_nodes_in_group("meathead").size() == 1, "one meathead")
+	check(get_nodes_in_group("station").size() == 2, "terminal + forge stations")
+	check(main.round_active, "round starts active")
+
+func test_grab_and_yeet_into_wall() -> void:
+	var m := meat(); m.ai_enabled = false
+	var e: Node3D = bots()[0]
+	park_everyone_else([e])
+	place(m, Vector3(14, 1, -14)); place(e, Vector3(12.5, 0.7, -14))
+	await frames(3)
+	check(m.try_grab(), "grab succeeds in range")
+	check(m.held_object == e and e.is_held and e.freeze, "egghead is held & frozen")
+	await frames(5)
+	check(e.global_position.y > 2.0, "held egghead is carried above the meathead")
+	var heat0: int = main.heat
+	m.yeet(Vector3.RIGHT)
+	check(m.held_object == null and not e.is_held and e.is_thrown, "yeet releases and flags thrown")
+	check(main.heat == heat0 + 1, "yeet earns heat")
+	for i in 120:
+		await physics_frame
+		if e.stun_timer > 0.0: break
+	check(e.stun_timer > 0.0 and not e.is_thrown, "egghead stunned on hitting the wall")
+
+func test_charge_cracks_and_respawns() -> void:
+	var m := meat(); m.ai_enabled = false
+	var e: Node3D = bots()[0]
+	park_everyone_else([e])
+	place(m, Vector3(0, 1, 0)); place(e, Vector3(0, 0.7, -5))
+	await frames(3)
+	check(m.start_charge(Vector3.FORWARD), "charge starts")
+	for i in 90:
+		await physics_frame
+		if e.is_cracked: break
+	check(e.is_cracked and not e.visible, "charged egghead cracks")
+	check(main.heat >= 2, "crack earns heat")
+	check(not m.start_charge(Vector3.FORWARD), "charge has a cooldown")
+	await frames(int(e.respawn_time * 60) + 5)
+	check(not e.is_cracked and e.visible and e.global_position.distance_to(main.LIBRARY_SPAWN) < 5.0, "egghead respawns in the Library")
+
+func test_belly_flop_respects_obsidian() -> void:
+	var m := meat(); m.ai_enabled = false
+	var tile: Node3D = main.get_node("ObsidianTile")
+	var safe: Node3D = bots()[0]
+	var exposed: Node3D = bots()[1]
+	park_everyone_else([safe, exposed])
+	var c := tile.global_position
+	place(m, c + Vector3(-3.2, 1, 0)); place(safe, c + Vector3(-1.2, 0.7, 0)); place(exposed, c + Vector3(-3.2, 0.7, 2.5))
+	await frames(4)
+	check(safe.slam_immune, "egghead on obsidian is slam-immune")
+	var hits: int = m.belly_flop()
+	check(hits == 1, "belly-flop hit exactly the exposed egghead (got %d)" % hits)
+	check(exposed.stun_timer > 0.0 and safe.stun_timer <= 0.0, "obsidian egghead unaffected")
+	check(m.stun_timer > 0.0, "meathead is winded after flopping")
+	check(m.belly_flop() == 0, "belly-flop has a cooldown")
+
+func test_allegro_speeds_up() -> void:
+	var e: Node3D = bots()[0]
+	park_everyone_else([e])
+	place(e, main.get_node("AllegroTile").global_position + Vector3(0, 0.7, 0))
+	await frames(3)
+	check(e.speed_multiplier > 1.0, "allegro boosts speed")
+	place(e, Vector3(0, 0.7, 0))
+	await frames(3)
+	check(e.speed_multiplier == 1.0, "boost ends when leaving the tile")
+
+func test_grease() -> void:
+	var m := meat(); m.ai_enabled = false
+	var e: Node3D = bots()[0]
+	park_everyone_else([e])
+	place(m, Vector3(0, 1, 0)); place(e, Vector3(2, 0.7, 0))
+	await frames(2)
+	check(m.spill_grease(), "grease spills")
+	await frames(3)
+	check(e.is_greased and e.linear_damp == 0.0, "egghead in grease loses traction")
+	place(e, Vector3(10, 0.7, 0))
+	await frames(3)
+	check(not e.is_greased and e.linear_damp == 5.0, "traction returns after leaving grease")
+
+func _walk_player_onto(station: Node3D, offset := Vector3(1.5, 0.7, 0)) -> void:
+	place(main.player, station.global_position + offset)
+	for i in 30:
+		await physics_frame
+		if station.is_typing(): return
+
+func _type(station: Node3D, text: String) -> void:
+	for c in text:
+		station.type_char(c)
+
+func test_habeas_corpus_frees_captive() -> void:
+	var m := meat(); m.ai_enabled = false
+	var term: Node3D = main.get_node("Terminal")
+	var captive: Node3D = bots()[0]
+	park_everyone_else([captive, main.player])
+	place(m, Vector3(5, 1, 0)); place(captive, Vector3(6.5, 0.7, 0))
+	await frames(3)
+	m.grab(captive)
+	await _walk_player_onto(term)
+	check(term.is_typing() and main.player.is_typing, "player starts typing at the terminal and is rooted")
+	_type(term, "HABEAS CORPUS")
+	check(m.held_object == null and not captive.is_held, "captive egghead freed")
+	check(m.stun_timer > 0.0, "meathead stunned by the writ")
+	check(term.barrier.visible, "barrier raised")
+	check(not term.can_activate(), "terminal goes on cooldown")
+	check(not main.player.is_typing, "player can move again")
+
+func test_escape_cancels_typing() -> void:
+	var term: Node3D = main.get_node("Terminal")
+	park_everyone_else([main.player])
+	await _walk_player_onto(term)
+	check(term.is_typing(), "typing started")
+	var ev := InputEventKey.new()
+	ev.physical_keycode = KEY_ESCAPE
+	ev.pressed = true
+	term._unhandled_key_input(ev)
+	check(not term.is_typing() and not main.player.is_typing, "Esc releases the player")
+	await frames(5)
+	check(not term.is_typing(), "station doesn't re-trap the player while still standing on it")
+
+func test_forge_locks_block_and_wins() -> void:
+	var forge: Node3D = main.get_node("Forge")
+	park_everyone_else([main.player])
+	await _walk_player_onto(forge, Vector3(2, 0.7, 2))
+	check(not forge.is_typing(), "forge stays idle with no block in it")
+	var blocks := get_nodes_in_group("block")
+	place(blocks[0], forge.global_position + Vector3(-1, 0.6, -1))
+	for i in 30:
+		await physics_frame
+		if forge.is_typing(): break
+	check(forge.is_typing(), "forge activates once a block is inside")
+	main.blocks_locked = main.blocks_to_win - 1
+	_type(forge, forge.target_phrase)
+	check(blocks[0].is_locked and blocks[0].freeze, "block is tempered & fixed")
+	check(main.blocks_locked == main.blocks_to_win, "score incremented")
+	check(not main.round_active and main.winner == "EGGHEADS", "eggheads win at the target")
+
+func test_wrong_letter_resets() -> void:
+	var term: Node3D = main.get_node("Terminal")
+	park_everyone_else([main.player])
+	await _walk_player_onto(term)
+	_type(term, "HAB")
+	check(term.current_input == "HAB", "correct prefix accumulates")
+	term.type_char("X")
+	check(term.current_input == "", "wrong letter wipes the line")
+
+func test_timer_expiry() -> void:
+	main.time_left = 0.05
+	await frames(10)
+	check(not main.round_active and main.winner == "MEATHEADS", "meatheads win when time runs out")
+
+func test_struggle_free() -> void:
+	var m := meat(); m.ai_enabled = false
+	park_everyone_else([main.player])
+	place(m, Vector3(0, 1, 0)); place(main.player, Vector3(1.5, 0.7, 0))
+	await frames(2)
+	m.grab(main.player)
+	for i in main.player.struggle_presses_needed:
+		var ev := InputEventAction.new()
+		ev.action = "egghead_move_left"
+		ev.pressed = true
+		main.player._unhandled_input(ev)
+	await frames(2)
+	check(not main.player.is_held and m.held_object == null, "mashing frees the player")
+
+func test_ai_soak() -> void:
+	# 40 simulated seconds of AI Meathead vs bot Eggheads: must not error, and stuff must happen.
+	var start := {}
+	for b in get_nodes_in_group("block"):
+		start[b] = b.global_position
+	var forge: Node3D = main.get_node("Forge")
+	var max_in_forge := 0
+	for i in 2400:
+		await physics_frame
+		if i % 30 == 0:
+			max_in_forge = max(max_in_forge, forge.blocks_inside().size())
+	var moved := 0
+	for b in start:
+		if b.global_position.distance_to(start[b]) > 3.0:
+			moved += 1
+	print("    soak: heat=%d, blocks moved=%d, max blocks in forge=%d" % [main.heat, moved, max_in_forge])
+	check(main.heat > 0, "AI meathead causes chaos")
+	check(moved >= 2, "bots push blocks around")
+	check(max_in_forge >= 1, "bots deliver at least one block to the forge")

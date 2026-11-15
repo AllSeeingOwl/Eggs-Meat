@@ -1,30 +1,54 @@
-[gd_scene load_steps=5 format=3 uid="uid://e8u67j09n3y0w"]
+[gd_scene load_steps=12 format=3]
 
-[ext_resource type="PackedScene" uid="uid://cx603lix76w7w" path="res://arena.tscn" id="1_a1b2c"]
-[ext_resource type="PackedScene" uid="uid://c7t45h87l1w8u" path="res://egghead.tscn" id="2_b2c3d"]
-[ext_resource type="PackedScene" uid="uid://d6t56i98m2x9v" path="res://meathead.tscn" id="3_c3d4e"]
-[ext_resource type="Script" path="res://camera.gd" id="4_d4e5f"]
-[ext_resource type="PackedScene" uid="uid://trmnl12345678" path="res://terminal.tscn" id="5_e5f6g"]
+[ext_resource type="Script" path="res://game.gd" id="1_game"]
+[ext_resource type="PackedScene" path="res://arena.tscn" id="2_arena"]
+[ext_resource type="PackedScene" path="res://meathead.tscn" id="3_meat"]
+[ext_resource type="PackedScene" path="res://terminal.tscn" id="4_term"]
+[ext_resource type="PackedScene" path="res://forge.tscn" id="5_forge"]
+[ext_resource type="PackedScene" path="res://effect_tile.tscn" id="6_tile"]
+[ext_resource type="Script" path="res://camera.gd" id="7_cam"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_energy = 0.6
 
 [node name="Main" type="Node3D"]
+script = ExtResource("1_game")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
 shadow_enabled = true
 
-[node name="Arena" parent="." instance=ExtResource("1_a1b2c")]
+[node name="Arena" parent="." instance=ExtResource("2_arena")]
 
-[node name="Egghead" parent="." instance=ExtResource("2_b2c3d")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1, 0)
+[node name="Meathead" parent="." instance=ExtResource("3_meat")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -16)
 
-[node name="Meathead" parent="." instance=ExtResource("3_c3d4e")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 2, 0)
+[node name="Terminal" parent="." instance=ExtResource("4_term")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 12)
 
-[node name="Terminal" parent="." instance=ExtResource("5_e5f6g")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+[node name="Forge" parent="." instance=ExtResource("5_forge")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 6)
 
-[node name="Camera3D" type="Camera3D" parent="." node_paths=PackedStringArray("target1", "target2")]
-transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 15, 10)
-script = ExtResource("4_d4e5f")
-target1 = NodePath("../Egghead")
-target2 = NodePath("../Meathead")
+[node name="AllegroTile" parent="." instance=ExtResource("6_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, 2)
+kind = 0
+
+[node name="ObsidianTile" parent="." instance=ExtResource("6_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 13)
+kind = 1
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 31, 19.5)
+fov = 60.0
+script = ExtResource("7_cam")
