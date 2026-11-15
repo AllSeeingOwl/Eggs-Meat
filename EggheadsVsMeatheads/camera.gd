@@ -1,4 +1,8 @@
 extends Camera3D
+## Fixed overview of the arena by default (best for one shared screen).
+## Enable follow_targets to track the midpoint of two players instead.
+
+@export var follow_targets: bool = false
 
 @export var target1: Node3D
 @export var target2: Node3D
@@ -8,7 +12,7 @@ extends Camera3D
 @export var camera_distance_multiplier: float = 1.0
 
 func _process(delta: float) -> void:
-	if not target1 or not target2:
+	if not follow_targets or not target1 or not target2:
 		return
 
 	# Calculate midpoint

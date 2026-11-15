@@ -1,25 +1,39 @@
-[gd_scene load_steps=5 format=3 uid="uid://c7t45h87l1w8u"]
+[gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" path="res://egghead.gd" id="1_x8d01"]
+[ext_resource type="Script" path="res://egghead.gd" id="1_egg"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_y1g52"]
-radius = 0.5
-height = 1.0
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_egg"]
+radius = 0.45
+height = 1.3
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_i80j6"]
-radius = 0.5
-height = 1.0
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_egg"]
+radius = 0.45
+height = 1.3
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(1, 0.85, 0.1, 1)
+emission_enabled = true
+emission = Color(1, 0.7, 0, 1)
+
+[sub_resource type="PrismMesh" id="PrismMesh_marker"]
+material = SubResource("StandardMaterial3D_marker")
+size = Vector3(0.5, 0.4, 0.15)
 
 [node name="Egghead" type="RigidBody3D"]
-linear_damp = 5.0
 mass = 1.0
+linear_damp = 5.0
 axis_lock_angular_x = true
 axis_lock_angular_y = true
 axis_lock_angular_z = true
-script = ExtResource("1_x8d01")
+script = ExtResource("1_egg")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-shape = SubResource("CapsuleShape3D_y1g52")
+shape = SubResource("CapsuleShape3D_egg")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-mesh = SubResource("CapsuleMesh_i80j6")
+mesh = SubResource("CapsuleMesh_egg")
+
+[node name="Marker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -1, 0, 0, 0, 1, 0, 1.25, 0)
+visible = false
+mesh = SubResource("PrismMesh_marker")
