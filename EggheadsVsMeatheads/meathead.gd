@@ -132,6 +132,7 @@ func start_charge(direction: Vector3 = Vector3.ZERO) -> bool:
 	charge_timer = charge_duration
 	cooldown_timer = charge_cooldown
 	charge_direction = direction.normalized() if direction.length() > 0.1 else facing
+	_juice("charge", 0.12)
 	return true
 
 func try_grab() -> bool:
@@ -154,6 +155,7 @@ func try_grab() -> bool:
 func grab(body: Node3D) -> void:
 	held_object = body
 	_ai_hold_time = 0.0
+	_juice("grab", 0.05)
 	if body is RigidBody3D:
 		body.collision_layer = 0
 		body.collision_mask = 0
@@ -190,6 +192,7 @@ func yeet(direction: Vector3) -> void:
 		body.apply_impulse(dir * yeet_force * body.mass)
 		if body.has_method("set_thrown"):
 			body.set_thrown(true)
+		_juice("yeet", 0.15)
 		var game = get_tree().get_first_node_in_group("game")
 		if game:
 			game.add_heat(1, "YEET!")
@@ -201,6 +204,7 @@ func spill_grease() -> bool:
 	get_parent().add_child(grease)
 	grease.global_position = Vector3(global_position.x, 0.05, global_position.z)
 	grease_cooldown_timer = grease_cooldown
+	_juice("grease")
 	return true
 
 func belly_flop() -> int:
@@ -237,9 +241,17 @@ func _update_held() -> void:
 	held_object.global_position = global_position + Vector3(0, 2.0, 0)
 	if held_object.has_method("wants_to_escape") and held_object.wants_to_escape():
 		release(Vector3(randf_range(-2, 2), 3, randf_range(-2, 2)))
+		_juice("free")
 		var game = get_tree().get_first_node_in_group("game")
 		if game:
 			game.flash("An Egghead wriggled free!")
+
+func _juice(sound: String, shake: float = 0.0) -> void:
+	var game = get_tree().get_first_node_in_group("game")
+	if game:
+		game.juice(sound, shake)
+	else:
+		SoundFX.play_sfx(sound)
 
 func _on_body_entered(body: Node) -> void:
 	if not is_charging or not body.has_method("is_egghead"):

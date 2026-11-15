@@ -63,12 +63,21 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("toggle_meathead_ai"):
 		meathead.ai_enabled = not meathead.ai_enabled
 		flash("Meathead: " + ("AI" if meathead.ai_enabled else "HUMAN (arrows / gamepad)"))
+	if Input.is_action_just_pressed("toggle_shake"):
+		camera.shake_enabled = not camera.shake_enabled
+		camera.trauma = 0.0
+		flash("Screen shake " + ("ON" if camera.shake_enabled else "OFF"))
+	if Input.is_action_just_pressed("toggle_mute"):
+		flash("Sound " + ("OFF" if SoundFX.toggle_mute_sfx() else "ON"))
 	if not round_active and Input.is_action_just_pressed("restart"):
 		get_tree().reload_current_scene()
 		return
 
 	if round_active:
+		var before := ceili(time_left)
 		time_left -= delta
+		if ceili(time_left) < before and before <= 10 and time_left > 0.0:
+			SoundFX.play_sfx("tick", -4.0, 0.0) # Final countdown.
 		if time_left <= 0.0:
 			time_left = 0.0
 			end_round("MEATHEADS")
@@ -81,17 +90,21 @@ func _process(delta: float) -> void:
 
 func on_block_locked(_block: Node3D, word: String) -> void:
 	blocks_locked += 1
+	juice("lock", 0.2)
 	flash("%s! Block tempered (%d/%d)" % [word, blocks_locked, blocks_to_win])
 	if blocks_locked >= blocks_to_win:
 		end_round("EGGHEADS")
 
 func on_egghead_cracked(e: Node3D) -> void:
+	juice("crack", 0.55 if e == player else 0.35)
 	add_heat(2, "CRACK! You were cracked - respawning in the Library..." if e == player else "CRACK!")
 
-func on_egghead_wall_splat(_e: Node3D) -> void:
+func on_egghead_wall_splat(e: Node3D) -> void:
+	juice("splat", 0.4 if e == player else 0.25)
 	add_heat(1, "SPLAT!")
 
 func on_belly_flop(_m: Node3D, hits: int) -> void:
+	juice("flop", 0.5 + 0.1 * hits)
 	if hits > 0:
 		add_heat(hits, "BELLY-FLOP! x%d" % hits)
 
@@ -107,10 +120,17 @@ func end_round(who: String) -> void:
 		return
 	round_active = false
 	winner = who
+	juice("win" if who == "EGGHEADS" else "lose", 0.3)
 	for s in get_tree().get_nodes_in_group("station"):
 		s.stop_typing()
 	_hud_end.text = "%s WIN!\n\nBlocks tempered: %d/%d    Heat: %d\n\nPress R to play again" % [who, blocks_locked, blocks_to_win, heat]
 	_hud_end.visible = true
+
+## Play a sound and kick the camera. Central so every impact feels consistent.
+func juice(sound: String, shake: float = 0.0, volume_db: float = 0.0) -> void:
+	SoundFX.play_sfx(sound, volume_db)
+	if shake > 0.0 and camera:
+		camera.add_trauma(shake)
 
 func flash(text: String, seconds: float = 2.5) -> void:
 	if _hud_flash == null:
@@ -152,7 +172,7 @@ func _build_hud() -> void:
 	_hud_help.grow_horizontal = Control.GROW_DIRECTION_END
 	_hud_help.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_hud_help.text = "EGGHEAD (you, gold): WASD move | stand on a station & type | Esc step away | mash WASD to escape a grab\n" \
-		+ "MEATHEAD: Arrows move | Enter charge | R-Shift grab/yeet | R-Ctrl grease | / belly-flop (or gamepad) | F2 toggle AI"
+		+ "MEATHEAD: Arrows move | Enter charge | R-Shift grab/yeet | R-Ctrl grease | / belly-flop (or gamepad) | F2 toggle AI | F3 shake | F4 mute"
 	root.add_child(_hud_help)
 	_hud_end = _label(44, Control.PRESET_CENTER, HORIZONTAL_ALIGNMENT_CENTER)
 	_hud_end.visible = false

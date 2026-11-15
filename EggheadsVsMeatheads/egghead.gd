@@ -169,6 +169,8 @@ func _respawn() -> void:
 	collision_layer = 1
 	collision_mask = 1
 	visible = true
+	if is_player:
+		SoundFX.play_sfx("respawn", -4.0, 0.0)
 
 func _on_body_entered(body: Node) -> void:
 	if is_thrown and body is StaticBody3D:
