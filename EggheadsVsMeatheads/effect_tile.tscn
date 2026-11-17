@@ -24,6 +24,7 @@ shape = SubResource("BoxShape3D_tile")
 [node name="Label3D" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 billboard = 1
+no_depth_test = true
 pixel_size = 0.012
 outline_size = 12
 font_size = 64

@@ -2,7 +2,9 @@
 
 A playable grey-box slice of the design docs in this repo: **"The Foundry of Force"**.
 
-![Gameplay screenshot (Web build)](docs/screenshot.png)
+![A round in progress: two blocks tempered, the player typing at the Forge with the No Vowels firewall on, the Meathead greasing the Forge](docs/screenshot.png)
+
+![Title screen: how to play, the learning mechanics, and the Meathead's Firewall choice](docs/title-screen.png)
 
 It covers the scope set out in *Proof of Concept Readiness Assessment.txt*:
 
