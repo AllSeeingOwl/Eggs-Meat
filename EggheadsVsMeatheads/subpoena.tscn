@@ -1,0 +1,59 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://subpoena_station.gd" id="1_sub"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_pad"]
+albedo_color = Color(0.55, 0.3, 0.8, 1)
+
+[sub_resource type="CylinderMesh" id="Mesh_pad"]
+material = SubResource("Mat_pad")
+top_radius = 2.5
+bottom_radius = 2.5
+height = 0.06
+
+[sub_resource type="StandardMaterial3D" id="Mat_podium"]
+albedo_color = Color(0.4, 0.2, 0.6, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_podium"]
+material = SubResource("Mat_podium")
+size = Vector3(1, 1.2, 0.6)
+
+[sub_resource type="BoxShape3D" id="Shape_podium"]
+size = Vector3(1, 1.2, 0.6)
+
+[sub_resource type="CylinderShape3D" id="Shape_trig"]
+radius = 2.5
+height = 2.0
+
+[node name="Subpoena" type="Node3D"]
+script = ExtResource("1_sub")
+
+[node name="Pad" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+mesh = SubResource("Mesh_pad")
+
+[node name="Podium" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Podium"]
+shape = SubResource("Shape_podium")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Podium"]
+mesh = SubResource("Mesh_podium")
+
+[node name="TriggerArea" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("Shape_trig")
+
+[node name="Label3D" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+billboard = 1
+no_depth_test = true
+pixel_size = 0.012
+modulate = Color(0.85, 0.7, 1, 1)
+outline_size = 16
+font_size = 96

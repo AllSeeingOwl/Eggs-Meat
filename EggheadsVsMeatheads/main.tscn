@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://game.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://arena.tscn" id="2_arena"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://forge.tscn" id="5_forge"]
 [ext_resource type="PackedScene" path="res://effect_tile.tscn" id="6_tile"]
 [ext_resource type="Script" path="res://camera.gd" id="7_cam"]
+[ext_resource type="PackedScene" path="res://subpoena.tscn" id="8_sub"]
+[ext_resource type="PackedScene" path="res://witness_stand.tscn" id="9_stand"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -47,6 +49,17 @@ kind = 0
 [node name="ObsidianTile" parent="." instance=ExtResource("6_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 13)
 kind = 1
+
+[node name="AdagioTile" parent="." instance=ExtResource("6_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 6)
+kind = 2
+
+[node name="WitnessStand" parent="." instance=ExtResource("9_stand")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.5, 0, -14.5)
+
+[node name="Subpoena" parent="." instance=ExtResource("8_sub")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, 14.5)
+witness_stand_path = NodePath("../WitnessStand")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 31, 19.5)

@@ -8,7 +8,7 @@ extends Node
 ##                               Right Ctrl = grease, / = belly-flop.
 ## Meathead (gamepad):           Left stick, A = charge, X = grab/yeet, B = grease, Y = belly-flop.
 ## Global:                       F2 = toggle Meathead AI, F3 = toggle screen shake,
-##                               F4 = mute, R = restart (after a round ends).
+##                               F4 = mute. After a round: R = rematch, T = title screen.
 
 func _ready() -> void:
 	_key_action("egghead_move_up", [KEY_W])
@@ -39,6 +39,7 @@ func _ready() -> void:
 	_key_action("toggle_shake", [KEY_F3])
 	_key_action("toggle_mute", [KEY_F4])
 	_key_action("restart", [KEY_R])
+	_key_action("to_title", [KEY_T])
 
 func _ensure(action: String) -> void:
 	if not InputMap.has_action(action):

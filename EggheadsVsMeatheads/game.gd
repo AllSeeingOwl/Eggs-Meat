@@ -3,6 +3,9 @@ extends Node3D
 ##   Eggheads win by tempering BLOCKS_TO_WIN iron blocks in the Forge.
 ##   The Meathead wins by running out the clock; it earns Heat for chaos.
 ## Spawns 1 player Egghead + bots (the 10:1 ratio, scaled down) and builds the HUD.
+## The first round opens on the title / how-to-play screen (game paused behind it),
+## where the Meathead side picks a pre-match Firewall. R rematches straight away
+## with the same Firewall; T goes back to the title screen.
 
 @export var round_time: float = 180.0
 @export var blocks_to_win: int = 5
@@ -10,13 +13,24 @@ extends Node3D
 @export var block_count: int = 8
 @export var egghead_scene: PackedScene = preload("res://egghead.tscn")
 @export var block_scene: PackedScene = preload("res://foundry_block.tscn")
+@export var show_title: bool = true ## Tests turn this off to start immediately.
+@export var rng_seed: int = 0 ## Non-zero = reproducible match (tests); 0 = random.
 
 const LIBRARY_SPAWN := Vector3(-15, 0.7, 12) # Where Eggheads (re)spawn.
 
 var time_left: float
 var blocks_locked: int = 0
 var heat: int = 0
-var round_active: bool = true
+var round_active: bool = false
+var round_clock: float = 0.0 ## Seconds since the round started.
+var firewall: String = "NONE" ## Meathead's pre-match sabotage: "NONE" or "NO_VOWELS".
+var title_screen: CanvasLayer
+
+# Rematch state must survive a scene reload. It lives in Engine metadata rather
+# than static vars: a static var keeps this script (and its preloaded scenes)
+# alive past engine shutdown, which shows up as false "leaked" warnings.
+const META_SKIP_TITLE := &"evm_skip_title_once"
+const META_FIREWALL := &"evm_last_firewall"
 var winner: String = ""
 var player: Node3D
 
@@ -32,7 +46,10 @@ var _flash_timer: float = 0.0
 
 func _ready() -> void:
 	add_to_group("game")
-	randomize()
+	if rng_seed != 0:
+		seed(rng_seed)
+	else:
+		randomize()
 	time_left = round_time
 	_build_hud()
 
@@ -48,7 +65,33 @@ func _ready() -> void:
 	if camera.follow_targets:
 		camera.target1 = player
 		camera.target2 = meathead
-	flash("Push iron blocks into the FORGE, then type to temper them!", 5.0)
+
+	if show_title and not Engine.get_meta(META_SKIP_TITLE, false):
+		title_screen = preload("res://title_screen.gd").new()
+		title_screen.start_requested.connect(start_round)
+		add_child(title_screen)
+		_hud_help.visible = false # The title screen explains the controls.
+		get_tree().paused = true
+	else:
+		start_round(Engine.get_meta(META_FIREWALL, "NONE"))
+	Engine.set_meta(META_SKIP_TITLE, false)
+
+func start_round(chosen_firewall: String = "NONE") -> void:
+	firewall = chosen_firewall
+	Engine.set_meta(META_FIREWALL, chosen_firewall)
+	time_left = round_time
+	round_clock = 0.0
+	round_active = true
+	if title_screen:
+		title_screen.queue_free()
+		title_screen = null
+	get_tree().paused = false
+	_hud_help.visible = true
+	if firewall == "NO_VOWELS":
+		flash("FIREWALL: NO VOWELS!  The words are missing their vowels...", 5.0)
+	else:
+		flash("Push iron blocks into the FORGE, then type to temper them!", 5.0)
+	SoundFX.play_sfx("respawn", 0.0, 0.0)
 
 func _spawn_egghead(is_player: bool, pos: Vector3) -> Node3D:
 	var e := egghead_scene.instantiate()
@@ -69,11 +112,17 @@ func _process(delta: float) -> void:
 		flash("Screen shake " + ("ON" if camera.shake_enabled else "OFF"))
 	if Input.is_action_just_pressed("toggle_mute"):
 		flash("Sound " + ("OFF" if SoundFX.toggle_mute_sfx() else "ON"))
-	if not round_active and Input.is_action_just_pressed("restart"):
-		get_tree().reload_current_scene()
-		return
+	if not round_active and winner != "":
+		if Input.is_action_just_pressed("restart"):
+			Engine.set_meta(META_SKIP_TITLE, true)
+			get_tree().reload_current_scene()
+			return
+		if Input.is_action_just_pressed("to_title"):
+			get_tree().reload_current_scene()
+			return
 
 	if round_active:
+		round_clock += delta
 		var before := ceili(time_left)
 		time_left -= delta
 		if ceili(time_left) < before and before <= 10 and time_left > 0.0:
@@ -123,7 +172,7 @@ func end_round(who: String) -> void:
 	juice("win" if who == "EGGHEADS" else "lose", 0.3)
 	for s in get_tree().get_nodes_in_group("station"):
 		s.stop_typing()
-	_hud_end.text = "%s WIN!\n\nBlocks tempered: %d/%d    Heat: %d\n\nPress R to play again" % [who, blocks_locked, blocks_to_win, heat]
+	_hud_end.text = "%s WIN!\n\nBlocks tempered: %d/%d    Heat: %d\n\nR  rematch        T  title screen" % [who, blocks_locked, blocks_to_win, heat]
 	_hud_end.visible = true
 
 ## Play a sound and kick the camera. Central so every impact feels consistent.
@@ -183,11 +232,13 @@ func _update_hud() -> void:
 	var secs := int(time_left) % 60
 	_hud_top.text = "THE FOUNDRY OF FORCE    %d:%02d    IQ (blocks): %d/%d    HEAT: %d    Meathead: %s" % [
 		mins, secs, blocks_locked, blocks_to_win, heat, "AI" if meathead.ai_enabled else "HUMAN"]
+	if firewall == "NO_VOWELS":
+		_hud_top.text += "\nFIREWALL: NO VOWELS"
 
 	var prompt := ""
 	for s in get_tree().get_nodes_in_group("station"):
 		if s.is_typing():
-			prompt = "TYPE:  %s\n%s_" % [s.target_phrase, s.current_input]
+			prompt = "TYPE:  %s\n%s_" % [s.display_phrase(), s.current_input]
 	if player and player.is_held:
 		prompt = "GRABBED! Mash WASD to wriggle free  [%s]" % ("#".repeat(int(player.struggle_progress() * 10)) + "-".repeat(10 - int(player.struggle_progress() * 10)))
 	elif player and player.is_cracked:
