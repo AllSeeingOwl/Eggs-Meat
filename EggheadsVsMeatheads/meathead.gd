@@ -17,6 +17,8 @@ extends RigidBody3D
 @export var flop_radius: float = 4.5
 @export var flop_recovery: float = 1.2
 @export var input_lag: float = 0.12 ## Seconds of deliberate input delay (clumsiness).
+@export var subpoena_speed: float = 14.0
+@export var witness_stand_time: float = 3.0 ## Stun once dragged onto the stand.
 @export var ai_enabled: bool = true
 @export var ai_aggression: float = 0.5 ## 0..1: how often the AI commits to attacks.
 
@@ -28,6 +30,8 @@ var grease_cooldown_timer: float = 0.0
 var flop_cooldown_timer: float = 0.0
 var stun_timer: float = 0.0
 var facing: Vector3 = Vector3.FORWARD
+var subpoena_timer: float = 0.0 ## > 0 while being dragged to the Witness Stand.
+var subpoena_target: Vector3
 
 var held_object: Node3D = null
 var grease_scene: PackedScene = preload("res://grease_spill.tscn")
@@ -53,9 +57,10 @@ func _physics_process(delta: float) -> void:
 	flop_cooldown_timer = max(0.0, flop_cooldown_timer - delta)
 
 	var intent := _human_intent()
-	if intent.any_input and ai_enabled:
+	var game = get_tree().get_first_node_in_group("game")
+	# Grace period: the Enter that starts the round must not count as a takeover.
+	if intent.any_input and ai_enabled and (game == null or game.round_clock > 0.5):
 		ai_enabled = false
-		var game = get_tree().get_first_node_in_group("game")
 		if game:
 			game.flash("A human has taken control of the Meathead!")
 	if ai_enabled:
@@ -68,6 +73,10 @@ func _physics_process(delta: float) -> void:
 		_input_buffer.pop_front()
 	if _clock - _input_buffer[0][0] >= input_lag:
 		direction = _input_buffer[0][1]
+
+	if subpoena_timer > 0.0:
+		_process_subpoena(delta)
+		return
 
 	if stun_timer > 0.0:
 		stun_timer -= delta
@@ -141,7 +150,7 @@ func try_grab() -> bool:
 	var best: Node3D = null
 	var best_d := grab_range
 	for e in get_tree().get_nodes_in_group("egghead"):
-		if not e.can_be_targeted():
+		if not e.can_be_grabbed():
 			continue
 		var d := global_position.distance_to(e.global_position)
 		if d <= best_d:
@@ -227,6 +236,28 @@ func belly_flop() -> int:
 		game.on_belly_flop(self, hits)
 	return hits
 
+## SUBPOENA: drop whatever we hold and get hauled to the Witness Stand, then
+## stand there (stunned) for witness_stand_time. Input is ignored throughout.
+func subpoena(target: Vector3, max_time: float = 4.0) -> void:
+	if held_object != null:
+		release(Vector3(0, 4, 0))
+	is_charging = false
+	subpoena_target = Vector3(target.x, global_position.y, target.z)
+	subpoena_timer = max_time
+
+func _process_subpoena(delta: float) -> void:
+	subpoena_timer -= delta
+	var to := subpoena_target - global_position
+	to.y = 0
+	if to.length() < 0.8 or subpoena_timer <= 0.0:
+		subpoena_timer = 0.0
+		linear_velocity = Vector3.ZERO
+		apply_stun(witness_stand_time)
+		return
+	var v := to.normalized() * subpoena_speed
+	linear_velocity = Vector3(v.x, linear_velocity.y, v.z)
+	facing = to.normalized()
+
 func apply_stun(duration: float, knockback: Vector3 = Vector3.ZERO) -> void:
 	stun_timer = max(stun_timer, duration)
 	is_charging = false
@@ -258,7 +289,13 @@ func _on_body_entered(body: Node) -> void:
 		return
 	var flat := Vector3(linear_velocity.x, 0, linear_velocity.z)
 	if flat.length() > max_speed * 1.2 and body.can_be_targeted():
-		body.crack()
+		if body.anchored:
+			# Adagio: the heavy Egghead doesn't budge; the Meathead bounces off.
+			body.linear_velocity = Vector3.ZERO
+			apply_stun(1.0, -flat.normalized() * 4.0)
+			_juice("splat", 0.3)
+		else:
+			body.crack()
 
 # --- AI --------------------------------------------------------------------
 
@@ -324,6 +361,8 @@ func _ai_pick_target(forge: Node3D) -> Node3D:
 			score += 0.5 * e.global_position.distance_to(forge.global_position) # Harass the workers near the forge.
 		if e.is_player:
 			score -= 4.0
+		if e.anchored:
+			score += 10.0 # Not worth it: can't be grabbed or charged down.
 		score += randf_range(0, 4)
 		if score < best_score:
 			best_score = score

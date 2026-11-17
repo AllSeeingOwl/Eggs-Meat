@@ -26,6 +26,7 @@ var is_held: bool = false
 var is_cracked: bool = false
 var speed_multiplier: float = 1.0 ## Set by Allegro tiles.
 var slam_immune: bool = false ## Set by Obsidian tiles.
+var anchored: bool = false ## Set by Adagio tiles: can't be grabbed or charged down.
 var spawn_point: Vector3
 
 var _body_material: StandardMaterial3D
@@ -71,6 +72,9 @@ func set_held(val: bool) -> void:
 
 func can_be_targeted() -> bool:
 	return not is_cracked and not is_held
+
+func can_be_grabbed() -> bool:
+	return can_be_targeted() and not anchored
 
 func _physics_process(delta: float) -> void:
 	if is_cracked:
@@ -160,6 +164,9 @@ func _respawn() -> void:
 	is_thrown = false
 	is_held = false
 	stun_timer = 0.0
+	speed_multiplier = 1.0
+	slam_immune = false
+	anchored = false
 	set_greased(false)
 	_body_material.albedo_color = PLAYER_COLOR if is_player else BOT_COLOR
 	global_position = spawn_point + Vector3(randf_range(-1, 1), 0, randf_range(-1, 1))

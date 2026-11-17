@@ -15,6 +15,7 @@ const RATE := 22050
 const POOL_SIZE := 16
 
 var sounds: Dictionary = {} ## name -> AudioStreamWAV
+var silent: bool = false ## Headless tests set this: no playback objects to clean up at exit.
 var _pool: Array[AudioStreamPlayer] = []
 var _next := 0
 
@@ -29,16 +30,31 @@ static func toggle_mute_sfx() -> bool:
 
 func _ready() -> void:
 	instance = self
+	process_mode = Node.PROCESS_MODE_ALWAYS # Title screen plays clicks while paused.
 	for i in POOL_SIZE:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_pool.append(p)
 	_build_all()
 
+func _exit_tree() -> void:
+	stop_all()
+	if instance == self:
+		instance = null
+
+## Silence everything and drop stream references (also avoids playback objects
+## outliving the engine at shutdown).
+func stop_all() -> void:
+	for p in _pool:
+		p.stop()
+		p.stream = null
+
 func play(sound: String, volume_db: float = 0.0, pitch_jitter: float = 0.08) -> void:
 	var stream: AudioStreamWAV = sounds.get(sound)
 	if stream == null:
 		push_warning("Unknown sound: " + sound)
+		return
+	if silent:
 		return
 	var p := _pool[_next]
 	_next = (_next + 1) % POOL_SIZE

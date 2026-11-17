@@ -117,8 +117,22 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 
+## The phrase as the player sees it. With the Meathead's "No Vowels" firewall
+## active, A/E/I/O/U are blanked out: you have to actually know the word.
+func display_phrase() -> String:
+	var game = get_tree().get_first_node_in_group("game") if is_inside_tree() else null
+	if game and game.firewall == "NO_VOWELS":
+		return hide_vowels(target_phrase)
+	return target_phrase
+
+static func hide_vowels(phrase: String) -> String:
+	var out := ""
+	for c in phrase:
+		out += "_" if "AEIOU".contains(c) else c
+	return out
+
 func _update_ui() -> void:
-	ui_label.text = "TYPE: %s\n%s_" % [target_phrase, current_input]
+	ui_label.text = "TYPE: %s\n%s_" % [display_phrase(), current_input]
 
 func _on_body_exited(body: Node3D) -> void:
 	if body == _cancelled_by:

@@ -12,6 +12,8 @@ func _initialize() -> void:
 		var n: Node = load(a[1]).new()
 		n.name = a[0]
 		root.add_child(n)
+		if a[0] == "Sfx":
+			n.silent = true # Gameplay tests don't need audio; test_sounds_synthesized checks it.
 	_run.call_deferred()
 
 func _run() -> void:
@@ -20,14 +22,25 @@ func _run() -> void:
 		"test_belly_flop_respects_obsidian", "test_allegro_speeds_up", "test_grease",
 		"test_habeas_corpus_frees_captive", "test_escape_cancels_typing",
 		"test_forge_locks_block_and_wins", "test_wrong_letter_resets", "test_timer_expiry",
-		"test_struggle_free", "test_sounds_synthesized", "test_screen_shake", "test_ai_soak",
+		"test_struggle_free", "test_subpoena_hauls_meathead", "test_adagio_is_grab_and_charge_proof",
+		"test_no_vowels_firewall", "test_title_screen_flow", "test_sounds_synthesized", "test_screen_shake", "test_ai_soak",
 	]
+	var only := OS.get_environment("TESTS") # e.g. TESTS=test_grease,test_timer_expiry
+	if only != "":
+		tests = tests.filter(func(t): return only.split(",").has(t))
 	for t in tests:
 		await _fresh()
 		var before := failures.size()
 		await call(t)
 		print(("PASS  " if failures.size() == before else "FAIL  ") + t)
 	_teardown()
+	var sfx := root.get_node_or_null("Sfx")
+	if sfx:
+		sfx.stop_all()
+	# The audio server frees stopped playbacks on its own real-time mix thread;
+	# --fixed-fps runs far faster than real time, so wait in wall-clock time.
+	OS.delay_msec(250)
+	await frames(2)
 	if failures.is_empty():
 		print("\nAll %d tests passed." % tests.size())
 		quit(0)
@@ -53,6 +66,7 @@ func _teardown() -> void:
 func _fresh() -> void:
 	_teardown()
 	main = load("res://main.tscn").instantiate()
+	main.show_title = false
 	root.add_child(main)
 	await frames(2)
 
@@ -78,7 +92,7 @@ func test_scene_setup() -> void:
 	check(bots().size() == 9, "9 bot eggheads (10:1 ratio scaled down), got %d" % bots().size())
 	check(get_nodes_in_group("block").size() == 8, "8 foundry blocks")
 	check(get_nodes_in_group("meathead").size() == 1, "one meathead")
-	check(get_nodes_in_group("station").size() == 2, "terminal + forge stations")
+	check(get_nodes_in_group("station").size() == 3, "terminal + subpoena + forge stations")
 	check(main.round_active, "round starts active")
 
 func test_grab_and_yeet_into_wall() -> void:
@@ -240,6 +254,92 @@ func test_struggle_free() -> void:
 	await frames(2)
 	check(not main.player.is_held and m.held_object == null, "mashing frees the player")
 
+func test_subpoena_hauls_meathead() -> void:
+	var m := meat(); m.ai_enabled = false
+	var sub: Node3D = main.get_node("Subpoena")
+	var stand: Vector3 = main.get_node("WitnessStand").global_position
+	var captive: Node3D = bots()[0]
+	park_everyone_else([captive, main.player])
+	place(m, Vector3(12, 1, -8)); place(captive, Vector3(13.5, 0.7, -8))
+	await frames(3)
+	m.grab(captive)
+	await _walk_player_onto(sub)
+	check(sub.is_typing(), "player starts typing at the subpoena station")
+	check(sub.display_phrase() == "SUBPOENA", "full phrase shown without a firewall")
+	_type(sub, "SUBPOENA")
+	check(m.held_object == null and not captive.is_held, "subpoena makes the meathead drop its captive")
+	check(m.subpoena_timer > 0.0, "meathead is being hauled")
+	check(not sub.can_activate(), "subpoena goes on cooldown")
+	# Human input must not break the haul.
+	for i in 300:
+		await physics_frame
+		if m.subpoena_timer <= 0.0: break
+	var flat := Vector3(m.global_position.x - stand.x, 0, m.global_position.z - stand.z)
+	check(flat.length() < 2.0, "meathead ends up on the witness stand (%.1fm away)" % flat.length())
+	check(m.stun_timer > 0.0, "meathead is stuck on the stand for a while")
+	check(not m.start_charge(Vector3.FORWARD), "meathead can't act while on the stand")
+
+func test_adagio_is_grab_and_charge_proof() -> void:
+	var m := meat(); m.ai_enabled = false
+	var tile: Vector3 = main.get_node("AdagioTile").global_position
+	var e: Node3D = bots()[0]
+	park_everyone_else([e])
+	place(e, tile + Vector3(0, 0.7, 0)); place(m, tile + Vector3(0, 1, 2.5))
+	await frames(3)
+	check(e.anchored and e.speed_multiplier < 1.0, "adagio makes the egghead heavy and slow")
+	check(not m.try_grab(), "anchored egghead can't be grabbed")
+	place(m, tile + Vector3(0, 1, 6))
+	await frames(2)
+	m.start_charge(Vector3.FORWARD)
+	for i in 90:
+		await physics_frame
+		if m.stun_timer > 0.0: break
+	check(not e.is_cracked, "charge doesn't crack an anchored egghead")
+	check(m.stun_timer > 0.0, "meathead bounces off and is dazed")
+	place(e, Vector3(0, 0.7, 0))
+	await frames(3)
+	check(not e.anchored and e.speed_multiplier == 1.0, "leaving adagio restores the egghead")
+
+func test_no_vowels_firewall() -> void:
+	main.firewall = "NO_VOWELS"
+	var forge: Node3D = main.get_node("Forge")
+	park_everyone_else([main.player])
+	place(get_nodes_in_group("block")[0], forge.global_position + Vector3(-1, 0.6, -1))
+	await _walk_player_onto(forge, Vector3(2, 0.7, 2))
+	check(forge.is_typing(), "forge typing starts")
+	var shown: String = forge.display_phrase()
+	check(not shown.contains("A") and not shown.contains("E") and not shown.contains("I") \
+		and not shown.contains("O") and not shown.contains("U"), "vowels hidden: %s" % shown)
+	check(shown.length() == forge.target_phrase.length(), "blanks keep the word's length")
+	main._update_hud()
+	check(main._hud_prompt.text.contains(shown), "HUD prompt shows the masked word")
+	_type(forge, forge.target_phrase)
+	check(main.blocks_locked == 1, "typing the real word still works")
+	check(TypingStation.hide_vowels("HABEAS CORPUS") == "H_B__S C_RP_S", "hide_vowels keeps consonants and spaces")
+
+func test_title_screen_flow() -> void:
+	# Rebuild the scene the way the real game starts: title first, paused.
+	_teardown()
+	main = load("res://main.tscn").instantiate()
+	root.add_child(main)
+	await frames(2)
+	check(main.title_screen != null and paused, "game opens paused on the title screen")
+	check(not main.round_active, "round hasn't started yet")
+	var t0: float = main.time_left
+	await frames(10)
+	check(main.time_left == t0, "clock doesn't run behind the title screen")
+	var left := InputEventAction.new(); left.action = "meathead_move_right"; left.pressed = true
+	main.title_screen._unhandled_input(left)
+	check(main.title_screen.selected_firewall() == "NO_VOWELS", "meathead side can pick a firewall")
+	var go := InputEventAction.new(); go.action = "ui_accept"; go.pressed = true
+	main.title_screen._unhandled_input(go)
+	await frames(3)
+	check(main.round_active and not paused and main.firewall == "NO_VOWELS", "start begins the round with the firewall")
+	check(main.title_screen == null, "title screen dismissed")
+	check(main.meathead.ai_enabled, "pressing start doesn't steal the Meathead from the AI")
+	main.end_round("MEATHEADS")
+	check(main._hud_end.text.contains("rematch") and main._hud_end.text.contains("title"), "end screen offers rematch and title")
+
 func test_sounds_synthesized() -> void:
 	var sfx := root.get_node("Sfx")
 	for name in ["crack", "splat", "flop", "charge", "grab", "yeet", "grease", "key", "wrong",
@@ -251,7 +351,7 @@ func test_sounds_synthesized() -> void:
 			for i in range(0, s.data.size(), 2):
 				peak = max(peak, absi(s.data.decode_s16(i)))
 			check(peak > 3000 and peak <= 32767, "sound '%s' is audible and not clipped (peak %d)" % [name, peak])
-		sfx.play(name)
+		sfx.play(name) # Silent mode still validates the name (warns if unknown).
 
 func test_screen_shake() -> void:
 	var cam: Camera3D = main.get_node("Camera3D")
@@ -277,6 +377,14 @@ func test_screen_shake() -> void:
 
 func test_ai_soak() -> void:
 	# 40 simulated seconds of AI Meathead vs bot Eggheads: must not error, and stuff must happen.
+	# Seeded so the outcome is reproducible: the AI is random enough that an unseeded
+	# run occasionally sees no delivery in 40s, which would make CI flaky.
+	_teardown()
+	main = load("res://main.tscn").instantiate()
+	main.show_title = false
+	main.rng_seed = int(OS.get_environment("SOAK_SEED")) if OS.get_environment("SOAK_SEED") != "" else 1
+	root.add_child(main)
+	await frames(2)
 	var start := {}
 	for b in get_nodes_in_group("block"):
 		start[b] = b.global_position
